@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Othello - CS 1320 Final</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 500px;
+            margin-bottom: 20px;
+        }
+        
+        .player-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 20px;
+            border-radius: 10px;
+            background-color: #ecf0f1;
+        }
+        
+        .player-info.active {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .player-disc {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            margin-top: 5px;
+        }
+        
+        .board {
+            display: grid;
+            grid-template-columns: repeat(8, 60px);
+            grid-template-rows: repeat(8, 60px);
+            gap: 2px;
+            background-color: #1e8449;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .cell {
+            width: 60px;
+            height: 60px;
+            background-color: #1e8449;
+            border-radius: 3px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .cell:hover {
+            background-color: #27ae60;
+        }
+        
+        .cell.valid-move::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+        }
+        
+        .disc {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .disc.black {
+            background-color: #2c3e50;
+        }
+        
+        .disc.white {
+            background-color: #ecf0f1;
+        }
+        
+        @keyframes placeDisc {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .disc.new {
+            animation: placeDisc 0.3s ease-out;
+        }
+        
+        @keyframes flipDisc {
+            0% { transform: rotateY(0deg); }
+            50% { transform: rotateY(90deg); }
+            100% { transform: rotateY(180deg); }
+        }
+        
+        .disc.flipping {
+            animation: flipDisc 0.4s ease-in-out;
+        }
+        
+        .message {
+            margin-top: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            height: 30px;
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal h2 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+        
+        .modal ul {
+            padding-left: 20px;
+        }
+        
+        .close-btn {
+            background-color: #e74c3c;
+            margin-top: 15px;
+        }
+        
+        .close-btn:hover {
+            background-color: #c0392b;
+        }
+    </style>
+</head>
+<body>
+    <h1>Othello - CS 1320 Final</h1>
+    
+    <div class="game-info">
+        <div class="player-info" id="player1-info">
+            <div>Player 1 (Black)</div>
+            <div class="player-disc black"></div>
+            <div id="player1-score">2</div>
+        </div>
+        <div class="player-info" id="player2-info">
+            <div>Player 2 (White)</div>
+            <div class="player-disc white"></div>
+            <div id="player2-score">2</div>
+        </div>
+    </div>
+    
+    <div class="board" id="board"></div>
+    
+    <div class="message" id="message"></div>
+    
+    <div class="buttons">
+        <button id="reset-btn">New Game</button>
+        <button id="rules-btn">Rules</button>
+    </div>
+
+    <!-- Rules Modal -->
+    <div class="modal" id="rules-modal">
+        <div class="modal-content">
+            <h2>Othello Rules</h2>
+            <ul>
+                <li><strong>Objective:</strong> Have the majority of your color discs on the board at the end of the game.</li>
+                <li><strong>Gameplay:</strong> Players alternate turns placing one disc of their color on the board.</li>
+                <li><strong>Valid Move:</strong> You must place your disc adjacent to an opponent's disc and flip one or more of their discs by surrounding them.</li>
+                <li><strong>Flipping Discs:</strong> When you place a disc so that your discs surround one or more opponent's discs in a straight line (horizontal, vertical, or diagonal), those opponent's discs are flipped to your color.</li>
+                <li><strong>No Valid Moves:</strong> If a player cannot make a valid move, their turn is skipped. If neither player can make a valid move, the game ends.</li>
+                <li><strong>Game End:</strong> The game ends when the board is full or neither player can make a valid move. The player with the most discs of their color wins.</li>
+            </ul>
+            <button class="close-btn" id="close-rules">Close</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const boardElement = document.getElementById('board');
+            const player1Info = document.getElementById('player1-info');
+            const player2Info = document.getElementById('player2-info');
+            const player1Score = document.getElementById('player1-score');
+            const player2Score = document.getElementById('player2-score');
+            const messageElement = document.getElementById('message');
+            const resetBtn = document.getElementById('reset-btn');
+            const rulesBtn = document.getElementById('rules-btn');
+            const rulesModal = document.getElementById('rules-modal');
+            const closeRulesBtn = document.getElementById('close-rules');
+            
+            // Game state
+            const BOARD_SIZE = 8;
+            let board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(null));
+            let currentPlayer = 'black';
+            let gameOver = false;
+            let validMoves = [];
+            
+            // Initialize the game
+            function initGame() {
+                // Clear the board
+                board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(null));
+                
+                // Set up initial pieces
+                const mid = BOARD_SIZE / 2;
+                board[mid - 1][mid - 1] = 'white';
+                board[mid - 1][mid] = 'black';
+                board[mid][mid - 1] = 'black';
+                board[mid][mid] = 'white';
+                
+                currentPlayer = 'black';
+                gameOver = false;
+                
+                renderBoard();
+                updatePlayerInfo();
+                updateScores();
+                messageElement.textContent = '';
+                
+                // Find valid moves for current player
+                validMoves = findValidMoves(currentPlayer);
+                highlightValidMoves();
+            }
+            
+            // Render the board
+            function renderBoard() {
+                boardElement.innerHTML = '';
+                
+                for (let row = 0; row < BOARD_SIZE; row++) {
+                    for (let col = 0; col < BOARD_SIZE; col++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        cell.dataset.row = row;
+                        cell.dataset.col = col;
+                        
+                        if (board[row][col]) {
+                            const disc = document.createElement('div');
+                            disc.className = `disc ${board[row][col]}`;
+                            cell.appendChild(disc);
+                        }
+                        
+                        cell.addEventListener('click', () => handleCellClick(row, col));
+                        boardElement.appendChild(cell);
+                    }
+                }
+            }
+            
+            // Update player info display
+            function updatePlayerInfo() {
+                if (currentPlayer === 'black') {
+                    player1Info.classList.add('active');
+                    player2Info.classList.remove('active');
+                } else {
+                    player1Info.classList.remove('active');
+                    player2Info.classList.add('active');
+                }
+            }
+            
+            // Update score display
+            function updateScores() {
+                let blackCount = 0;
+                let whiteCount = 0;
+                
+                for (let row = 0; row < BOARD_SIZE; row++) {
+                    for (let col = 0; col < BOARD_SIZE; col++) {
+                        if (board[row][col] === 'black') blackCount++;
+                        if (board[row][col] === 'white') whiteCount++;
+                    }
+                }
+                
+                player1Score.textContent = blackCount;
+                player2Score.textContent = whiteCount;
+            }
+            
+            // Find all valid moves for a player
+            function findValidMoves(player) {
+                const opponent = player === 'black' ? 'white' : 'black';
+                const moves = [];
+                
+                for (let row = 0; row < BOARD_SIZE; row++) {
+                    for (let col = 0; col < BOARD_SIZE; col++) {
+                        if (board[row][col] !== null) continue;
+                        
+                        // Check all 8 directions
+                        const directions = [
+                            [-1, -1], [-1, 0], [-1, 1],
+                            [0, -1],           [0, 1],
+                            [1, -1],  [1, 0],  [1, 1]
+                        ];
+                        
+                        let isValid = false;
+                        
+                        for (const [dr, dc] of directions) {
+                            let r = row + dr;
+                            let c = col + dc;
+                            let foundOpponent = false;
+                            
+                            while (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+                                if (board[r][c] === opponent) {
+                                    foundOpponent = true;
+                                } else if (board[r][c] === player && foundOpponent) {
+                                    isValid = true;
+                                    break;
+                                } else {
+                                    break;
+                                }
+                                
+                                r += dr;
+                                c += dc;
+                            }
+                            
+                            if (isValid) break;
+                        }
+                        
+                        if (isValid) {
+                            moves.push({ row, col });
+                        }
+                    }
+                }
+                
+                return moves;
+            }
+            
+            // Highlight valid moves on the board
+            function highlightValidMoves() {
+                const cells = document.querySelectorAll('.cell');
+                
+                cells.forEach(cell => {
+                    cell.classList.remove('valid-move');
+                });
+                
+                for (const move of validMoves) {
+                    const cell = document.querySelector(`.cell[data-row="${move.row}"][data-col="${move.col}"]`);
+                    if (cell) {
+                        cell.classList.add('valid-move');
+                    }
+                }
+            }
+            
+            // Handle cell click
+            async function handleCellClick(row, col) {
+                if (gameOver) return;
+                
+                // Check if the move is valid
+                const isValidMove = validMoves.some(move => move.row === row && move.col === col);
+                if (!isValidMove) return;
+                
+                // Place the disc
+                board[row][col] = currentPlayer;
+                const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+                
+                // Create new disc with animation
+                const disc = document.createElement('div');
+                disc.className = `disc ${currentPlayer} new`;
+                cell.innerHTML = '';
+                cell.appendChild(disc);
+                
+                // Find discs to flip
+                const discsToFlip = findDiscsToFlip(row, col, currentPlayer);
+                
+                // Flip opponent's discs with animation
+                for (const { r, c } of discsToFlip) {
+                    board[r][c] = currentPlayer;
+                    const flipCell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+                    const flipDisc = flipCell.querySelector('.disc');
+                    
+                    if (flipDisc) {
+                        flipDisc.classList.add('flipping');
+                        setTimeout(() => {
+                            flipDisc.className = `disc ${currentPlayer}`;
+                        }, 200);
+                    }
+                }
+                
+                // Wait for animations to complete
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Switch player
+                currentPlayer = currentPlayer === 'black' ? 'white' : 'black';
+                updatePlayerInfo();
+                
+                // Find valid moves for next player
+                validMoves = findValidMoves(currentPlayer);
+                
+                // If no valid moves, switch back
+                if (validMoves.length === 0) {
+                    currentPlayer = currentPlayer === 'black' ? 'white' : 'black';
+                    validMoves = findValidMoves(currentPlayer);
+                    
+                    if (validMoves.length === 0) {
+                        // Game over if neither player has moves
+                        gameOver = true;
+                        endGame();
+                    } else {
+                        messageElement.textContent = `No moves for ${currentPlayer === 'black' ? 'White' : 'Black'}. Your turn again.`;
+                    }
+                }
+                
+                highlightValidMoves();
+                updateScores();
+            }
+            
+            // Find all discs that would be flipped by a move
+            function findDiscsToFlip(row, col, player) {
+                const opponent = player === 'black' ? 'white' : 'black';
+                const discsToFlip = [];
+                
+                // Check all 8 directions
+                const directions = [
+                    [-1, -1], [-1, 0], [-1, 1],
+                    [0, -1],           [0, 1],
+                    [1, -1],  [1, 0],  [1, 1]
+                ];
+                
+                for (const [dr, dc] of directions) {
+                    let r = row + dr;
+                    let c = col + dc;
+                    let tempFlip = [];
+                    let foundOpponent = false;
+                    
+                    while (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+                        if (board[r][c] === opponent) {
+                            tempFlip.push({ r, c });
+                            foundOpponent = true;
+                        } else if (board[r][c] === player && foundOpponent) {
+                            discsToFlip.push(...tempFlip);
+                            break;
+                        } else {
+                            break;
+                        }
+                        
+                        r += dr;
+                        c += dc;
+                    }
+                }
+                
+                return discsToFlip;
+            }
+            
+            // End the game and determine winner
+            function endGame() {
+                let blackCount = 0;
+                let whiteCount = 0;
+                
+                for (let row = 0; row < BOARD_SIZE; row++) {
+                    for (let col = 0; col < BOARD_SIZE; col++) {
+                        if (board[row][col] === 'black') blackCount++;
+                        if (board[row][col] === 'white') whiteCount++;
+                    }
+                }
+                
+                if (blackCount > whiteCount) {
+                    messageElement.textContent = `Game Over! Black wins ${blackCount}-${whiteCount}`;
+                } else if (whiteCount > blackCount) {
+                    messageElement.textContent = `Game Over! White wins ${whiteCount}-${blackCount}`;
+                } else {
+                    messageElement.textContent = `Game Over! It's a tie ${blackCount}-${whiteCount}`;
+                }
+            }
+            
+            // Event listeners
+            resetBtn.addEventListener('click', initGame);
+            
+            rulesBtn.addEventListener('click', () => {
+                rulesModal.style.display = 'flex';
+            });
+            
+            closeRulesBtn.addEventListener('click', () => {
+                rulesModal.style.display = 'none';
+            });
+            
+            // Close modal when clicking outside of it
+            window.addEventListener('click', (event) => {
+                if (event.target === rulesModal) {
+                    rulesModal.style.display = 'none';
+                }
+            });
+            
+            // Initialize the game
+            initGame();
+        });
+    </script>
+</body>
+</html>
